@@ -13,6 +13,7 @@ def find_index(components, vertex):
 
 def boruvka(vertices, edges):
     mst = []
+    steps = []
 
     # Sort edges by weight
     edges = sorted(edges, key=lambda x: x[2])
@@ -20,7 +21,15 @@ def boruvka(vertices, edges):
     # Each vertex is its own component
     components = [{v} for v in vertices]
 
+    # Initial step: show original components
+    steps.append({
+        'components': components.copy(),
+        'mst_edges': [],
+        'description': 'Initial state: Each vertex is a separate component'
+    })
+
     # Continue until there is only one component
+    iteration = 1
     while len(components) > 1:
         cheapest_edges = {}
 
@@ -44,7 +53,6 @@ def boruvka(vertices, edges):
             component1 = find_index(components, u)
             component2 = find_index(components, v)
 
-            # Double-check component validity before merging
             if component1 != -8 and component2 != -8 and component1 != component2:
                 # Merge the two components
                 merged = components[component1].union(components[component2])
@@ -56,60 +64,98 @@ def boruvka(vertices, edges):
 
                 # Add the edge to the Minimum Spanning Tree
                 mst.append((u, v, weight))
-    return mst
+
+                # Store the step
+                steps.append({
+                    'components': components.copy(),
+                    'mst_edges': mst.copy(),
+                    'description': f'Iteration {iteration}: Merged {u} - {v} with weight {weight}'
+                })
+                iteration += 1
+
+    return mst, steps
 
 
-def plotting(edges, mst):
+def plot_boruvka_steps(vertices, edges, steps):
     # Create a NetworkX graph with all original edges
     G = nx.Graph()
     for u, v, weight in edges:
         G.add_edge(u, v, weight=weight)
 
-    # Create a Minimum Spanning Tree graph
-    MST = nx.Graph()
-    for u, v, weight in mst:
-        MST.add_edge(u, v, weight=weight)
-
-    # Create a figure with two subplots for comparison
-    plt.figure(figsize=(12, 5))
-
-    # Layout for consistent vertex positioning
+    # Consistent layout for all plots
     pos = nx.spring_layout(G, seed=42)
 
-    # Original Graph Visualization
-    plt.subplot(121)
-    nx.draw(G, pos, with_labels=True, node_color='lightblue',
-            node_size=500, font_size=10, font_weight='bold')
+    # Create a figure with enough subplots
+    num_steps = len(steps)
+    fig = plt.figure(figsize=(15, 3 * ((num_steps + 1) // 2)), constrained_layout=True)
 
-    # Draw edge weights on original graph
-    edge_labels = nx.get_edge_attributes(G, 'weight')
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
-    plt.title("Original Graph")
+    # Create subplot grid
+    subfigs = fig.subfigures(((num_steps + 1) // 2), 2)
 
-    # Minimum Spanning Tree Visualization
-    plt.subplot(122)
-    nx.draw(MST, pos, with_labels=True, node_color='lightgreen',
-            node_size=500, font_size=10, font_weight='bold')
+    # Flatten subfigs in case of multiple rows
+    if num_steps > 2:
+        subfigs = subfigs.flatten()
 
-    # Draw edge weights on MST
-    mst_edge_labels = {(u, v): weight for (u, v, weight) in mst}
-    nx.draw_networkx_edge_labels(MST, pos, edge_labels=mst_edge_labels)
-    plt.title("Minimum Spanning Tree")
-    plt.tight_layout()
+    # Plot each step
+    for i, step in enumerate(steps):
+        # Choose subplot
+        if num_steps > 2:
+            ax = subfigs[i].subplots()
+            subfigs[i].suptitle(step['description'])
+        else:
+            ax = subfigs[i].subplots()
+            subfigs[i].suptitle(step['description'])
+
+        # Create a graph for this step
+        current_graph = nx.Graph()
+
+        # Add all original edges
+        for u, v, weight in edges:
+            current_graph.add_edge(u, v, weight=weight)
+
+        # Highlight MST edges
+        mst_graph = nx.Graph()
+        for u, v, weight in step['mst_edges']:
+            mst_graph.add_edge(u, v, weight=weight)
+
+        # Draw the graph
+        nx.draw(current_graph, pos, ax=ax, with_labels=True,
+                node_color='lightblue', node_size=500,
+                font_size=8, font_weight='bold')
+
+        # Highlight MST edges in red
+        nx.draw_networkx_edges(current_graph, pos,
+                               edgelist=step['mst_edges'],
+                               edge_color='r',
+                               width=2,
+                               ax=ax)
+
+        # Draw edge weights
+        edge_labels = nx.get_edge_attributes(current_graph, 'weight')
+        nx.draw_networkx_edge_labels(current_graph, pos,
+                                     edge_labels=edge_labels,
+                                     ax=ax)
+
     plt.show()
 
 
-vertices = ['A', 'B', 'C', 'D']
+# Example usage
+vertices = ['Brno', 'Olomouc', 'Ostrava', 'Zlín']
 edges = [
-    ('A', 'B', 4),
-    ('A', 'C', 2),
-    ('B', 'C', 1),
-    ('B', 'D', 3),
-    ('C', 'D', 5)
+    ('Brno', 'Olomouc', 4),
+    ('Brno', 'Ostrava', 2),
+    ('Olomouc', 'Ostrava', 1),
+    ('Olomouc', 'Zlín', 3),
+    ('Ostrava', 'Zlín', 5)
 ]
 
-# Find the MST
-result = boruvka(vertices, edges)
+# Find the MST and get step-by-step details
+result, steps = boruvka(vertices, edges)
 
-# Plotting graph
-plotting(edges, result)
+# Plot the steps
+plot_boruvka_steps(vertices, edges, steps)
+
+# Print the final Minimum Spanning Tree
+print("Minimum Spanning Tree Edges:")
+for edge in result:
+    print(f"{edge[0]} -- {edge[1]} : {edge[2]}")
