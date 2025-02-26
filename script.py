@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 def find_index(components, vertex):
-    # Find the index of the component that contains the given vertex.
+    # Finds which component (set of connected vertices) a given vertex belongs to
     for i, component in enumerate(components):
         if vertex in component:
             return i
@@ -76,7 +76,7 @@ def boruvka(vertices, edges):
     return mst, steps
 
 
-def plot_boruvka_steps(vertices, edges, steps):
+def plot_boruvka_steps(edges, steps):
     # Create a NetworkX graph with all original edges
     G = nx.Graph()
     for u, v, weight in edges:
@@ -139,7 +139,7 @@ def plot_boruvka_steps(vertices, edges, steps):
     plt.show()
 
 
-# Example usage
+# Example with cities in Moravia
 vertices = ['Brno', 'Olomouc', 'Ostrava', 'Zlín']
 edges = [
     ('Brno', 'Olomouc', 4),
@@ -153,7 +153,7 @@ edges = [
 result, steps = boruvka(vertices, edges)
 
 # Plot the steps
-plot_boruvka_steps(vertices, edges, steps)
+plot_boruvka_steps(edges, steps)
 
 # Print the final Minimum Spanning Tree
 print("Minimum Spanning Tree Edges:")
